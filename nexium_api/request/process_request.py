@@ -40,7 +40,7 @@ async def process_request(
             state=ResponseState.ERROR,
             error=ResponseError(
                 name=e.name,
-                calss_name=e.class_name,
+                class_name=e.class_name,
                 message=e.message,
                 data=e.data,
             ),
