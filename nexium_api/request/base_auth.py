@@ -2,4 +2,5 @@ from sqlmodel import SQLModel
 
 
 class BaseRequestAuth(SQLModel):
-    pass
+    async def check(self):
+        pass

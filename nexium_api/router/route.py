@@ -1,6 +1,7 @@
 from functools import wraps
 from typing import Type, Callable
 
+from nexium_api.request.base_auth import BaseRequestAuth
 from nexium_api.request.base_data import BaseRequestData
 from nexium_api.response.base_data import BaseResponseData
 
@@ -19,7 +20,7 @@ def route(
         f.params = (path, type_, func, request_data, response_data, request_auth, check_request_auth, kwargs_decorator)
 
         @wraps(f)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(cls, auth: BaseRequestAuth = None, **kwargs):
             pass
 
         return wrapper
