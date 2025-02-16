@@ -1,4 +1,4 @@
-class ApiError(Exception):
+class APIError(Exception):
     name: str = 'api_error'
     message: str = 'An error occurred'
 
@@ -8,3 +8,4 @@ class ApiError(Exception):
 
         self.class_name = self.__class__.__name__
         self.data = kwargs
+        super().__init__(self.message)

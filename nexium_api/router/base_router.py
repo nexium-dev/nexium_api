@@ -1,8 +1,9 @@
-from typing import get_type_hints
+from typing import get_type_hints, Type
 
 from fastapi import APIRouter
 from starlette.requests import Request as StarletteRequest
 
+from nexium_api.utils.api_error import APIError
 from nexium_api.request.base_auth import BaseRequestAuth
 from nexium_api.request.process_request import process_request
 from nexium_api.request.request import Request as BaseRequest
@@ -13,7 +14,11 @@ class BaseRouter:
     prefix: str = ''
     request_auth = BaseRequestAuth
 
-    def __init__(self, prefix: str = ''):
+    def __init__(self, prefix: str = '', auth: BaseRequestAuth = None, errors: list[Type[APIError]] = None):
+        # For API Client
+        self.auth = auth
+        self.errors = errors
+
         self.fastapi = APIRouter(prefix=self.prefix)
         self.prefix = prefix + self.prefix
 
@@ -22,7 +27,11 @@ class BaseRouter:
             if not issubclass(attr, BaseRouter):
                continue
 
-            child_router = attr(prefix=self.prefix)
+            child_router = attr(
+                prefix=self.prefix,
+                auth=self.auth,
+                errors=self.errors,
+            )
             setattr(self, attr_name, child_router)
             self.fastapi.include_router(child_router.fastapi)
 
