@@ -19,7 +19,15 @@ class BaseRouter:
         self.auth = auth
         self.errors = errors
 
-        self.fastapi = APIRouter(prefix=self.prefix)
+        # Tag
+        tag = type(self).__mro__[0].__name__
+        if tag.endswith('Router'):
+            tag = tag[:-6]
+
+        self.fastapi = APIRouter(
+            prefix=self.prefix,
+            tags=[tag],
+        )
         self.prefix = prefix + self.prefix
 
         # Init child Routers
