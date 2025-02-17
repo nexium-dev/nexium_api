@@ -16,7 +16,6 @@ from nexium_api.response.base_data import BaseResponseData
 def route(
     request_data: Type[BaseRequestData],
     response_data: Type[BaseResponseData],
-    func: Callable,
     path: str = '/',
     type_: str = 'POST',
     request_auth: BaseRequestData = None,
@@ -25,7 +24,7 @@ def route(
     **kwargs_decorator,
 ):
     def decorator(f):
-        f.params = (path, type_, func, request_data, response_data, request_auth, check_request_auth, kwargs_decorator)
+        f.params = (path, type_, f.__name__, request_data, response_data, request_auth, check_request_auth, kwargs_decorator)
 
         @wraps(f)
         async def wrapper(cls, auth: BaseRequestAuth = None, **kwargs):

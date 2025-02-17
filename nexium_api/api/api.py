@@ -7,23 +7,40 @@ from starlette.responses import RedirectResponse, FileResponse
 
 from nexium_api.router.base_router import BaseRouter
 from nexium_api.utils.validation_error import valudation_error_exception_handler
+from nexium_api.utils.base_facade_service import BaseFacadeService
 
 
 class NexiumAPI(FastAPI):
     def __init__(
         self,
         main_router: Type[BaseRouter],
+        facade_services: list[Type[BaseFacadeService]] = None,
+        services_module = None,
         title: str = 'Nexium API',
         redirect_docs: bool = True,
         favicon_path: str = None,
         **kwargs,
     ):
+        if not facade_services and not services_module:
+            raise RuntimeError('You must specify at least one service')
+
+        self.facade_services = facade_services if facade_services else []
+        if services_module:
+            self.facade_services += [
+                cls
+                for name, cls in vars(services_module).items()
+                if isinstance(cls, type)
+                   and issubclass(cls, BaseFacadeService)
+                   and cls is not BaseFacadeService
+                   and cls not in self.facade_services
+            ]
+
         super().__init__(title=title, docs_url=None, redoc_url=None, **kwargs)
         self.add_exception_handler(
             exc_class_or_status_code=RequestValidationError,
             handler=valudation_error_exception_handler,  # type: ignore
         )
-        self.include_router(main_router().fastapi)
+        self.include_router(main_router(facade_services=self.facade_services).fastapi)
 
         @self.get(path='/docs', include_in_schema=False)
         async def favicon():

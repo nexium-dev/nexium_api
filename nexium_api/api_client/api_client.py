@@ -32,4 +32,4 @@ class NexiumApiClient:
 
         # noinspection HttpUrlsUsage
         prefix = f'{'https://' if protocol == Protocol.HTTPS else 'http://'}{self.host}'
-        super().__init__(prefix=prefix, auth=self.auth, errors=self.errors)
+        super().__init__(prefix=prefix, is_api_client=True, facade_services=[], auth=self.auth, errors=self.errors)
