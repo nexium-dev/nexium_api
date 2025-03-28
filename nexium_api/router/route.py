@@ -18,7 +18,7 @@ def route(
     response_data: Type[BaseResponseData],
     path: str = '/',
     type_: str = 'POST',
-    auth: BaseAuth = None,
+    auth: Type[BaseAuth] = None,
     response_field: str = None,
     **kwargs_decorator,
 ):
