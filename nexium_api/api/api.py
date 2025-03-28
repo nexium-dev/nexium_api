@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Callable
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
@@ -19,10 +19,16 @@ class NexiumAPI(FastAPI):
         title: str = 'Nexium API',
         redirect_docs: bool = True,
         favicon_path: str = None,
+
+        # Auth
+        auth_checkers: dict[str, Callable] = None,
+
         **kwargs,
     ):
         if not facade_services and not services_module:
             raise RuntimeError('You must specify at least one service')
+        if not auth_checkers:
+            auth_checkers = {}
 
         self.facade_services = facade_services if facade_services else []
         if services_module:
@@ -40,7 +46,13 @@ class NexiumAPI(FastAPI):
             exc_class_or_status_code=RequestValidationError,
             handler=valudation_error_exception_handler,  # type: ignore
         )
-        self.include_router(main_router(facade_services=self.facade_services).fastapi)
+        self.include_router(
+            main_router(
+                facade_services=self.facade_services,
+                auth_checkers=auth_checkers,
+                is_main_router=True,
+            ).fastapi,
+        )
 
         @self.get(path='/docs', include_in_schema=False)
         async def favicon():

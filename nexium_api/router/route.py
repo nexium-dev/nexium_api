@@ -1,6 +1,6 @@
 import logging
 from functools import wraps
-from typing import Type, Callable, Optional
+from typing import Type, Optional
 
 from aiohttp import ClientSession
 
@@ -8,7 +8,7 @@ from nexium_api.response.state import ResponseState
 from nexium_api.utils.api_error import APIError
 from nexium_api.request.request import Request as BaseRequest
 from nexium_api.response.response import Response as BaseResponse
-from nexium_api.request.base_auth import BaseRequestAuth
+from nexium_api.request.base_auth import BaseAuth
 from nexium_api.request.base_data import BaseRequestData
 from nexium_api.response.base_data import BaseResponseData
 
@@ -18,19 +18,17 @@ def route(
     response_data: Type[BaseResponseData],
     path: str = '/',
     type_: str = 'POST',
-    request_auth: BaseRequestData = None,
-    check_request_auth: Callable = None,
+    auth: BaseAuth = None,
     response_field: str = None,
     **kwargs_decorator,
 ):
     def decorator(f):
-        f.params = (path, type_, f.__name__, request_data, response_data, request_auth, check_request_auth, kwargs_decorator)
+        f.params = (path, type_, f.__name__, request_data, response_data, auth, kwargs_decorator)
 
         @wraps(f)
-        async def wrapper(cls, auth: BaseRequestAuth = None, **kwargs):
-            ra = request_auth if request_auth else cls.request_auth
+        async def wrapper(cls, **kwargs):
+            ra = auth if auth else cls.auth
             rd = request_data
-            auth = auth if auth else cls.auth
 
             class Request(BaseRequest):
                 auth: ra

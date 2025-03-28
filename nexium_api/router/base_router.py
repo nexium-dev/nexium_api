@@ -5,7 +5,7 @@ from starlette.requests import Request as StarletteRequest
 
 from nexium_api.utils.base_facade_service import BaseFacadeService
 from nexium_api.utils.api_error import APIError
-from nexium_api.request.base_auth import BaseRequestAuth
+from nexium_api.request.base_auth import BaseAuth
 from nexium_api.request.process_request import process_request
 from nexium_api.request.request import Request as BaseRequest
 from nexium_api.response.response import Response as BaseResponse
@@ -13,29 +13,36 @@ from nexium_api.response.response import Response as BaseResponse
 
 class BaseRouter:
     prefix: str = ''
-    request_auth = BaseRequestAuth
+    auth: BaseAuth = None
     facade_service: str = None
 
     def __init__(
         self,
         facade_services: list[Type[BaseFacadeService]],
+
+        # Auth
+        auth_checkers: dict[str, Callable] = None,
+        auth: BaseAuth = BaseAuth,
+
         prefix: str = '',
         is_api_client: bool = False,
-        auth: BaseRequestAuth = None,
         errors: list[Type[APIError]] = None,
+        is_main_router: bool = False,
     ):
         # For API Client
-        self.auth = auth
+        self.auth = self.auth if self.auth else auth
         self.errors = errors
 
         # Tag
         tag = type(self).__mro__[0].__name__
-        if tag.endswith('Router'):
-            tag = tag[:-6]
+        if not tag.endswith('Router') or is_main_router:
+            tags = []
+        else:
+            tags = [tag[:-6]]
 
         self.fastapi = APIRouter(
             prefix=self.prefix,
-            tags=[tag],
+            tags=tags,
         )
         self.prefix = prefix + self.prefix
 
@@ -57,13 +64,13 @@ class BaseRouter:
                 prefix=self.prefix,
                 is_api_client=is_api_client,
                 auth=self.auth,
+                auth_checkers=auth_checkers,
                 errors=self.errors,
             )
             setattr(self, attr_name, child_router)
             self.fastapi.include_router(child_router.fastapi)
 
         # Child routes
-        # noinspection PyUnresolvedReferences
         self.routes = [
             self.__getattribute__(name)
             for name in dir(self)
@@ -72,26 +79,33 @@ class BaseRouter:
 
         # Init child routes
         for route in self.routes:
-            path, type_, func_name, request_data, response_data, request_auth, check_request_auth, kwargs = route.params
-            request_auth = request_auth if request_auth else self.request_auth
+            path, type_, func_name, request_data, response_data, auth, kwargs = route.params
+            auth_ = auth if auth else self.auth
 
             class Request(BaseRequest):
-                auth: request_auth
+                auth: auth_
                 data: request_data
 
             class Response(BaseResponse):
                 data: response_data
 
-            if not self.facade_service_class and not is_api_client:
+            if is_api_client:
+                continue
+
+            if not self.facade_service_class:
                 raise RuntimeError(f'Facade service for {self.__class__.__name__} is not specified')
+
+            try:
+                handler = self.facade_service_class().__getattribute__(func_name)
+            except AttributeError:
+                raise RuntimeError(f'{self.facade_service_class.__name__} does not have the "{func_name}" function')
 
             self.add_route(
                 path=path,
                 request=Request,
                 response=Response,
-                handler=self.facade_service_class().__getattribute__(func_name)
-                if not is_api_client
-                else lambda x: print(),
+                handler=handler,
+                auth_checkers=auth_checkers,
             )
 
     def add_route(
@@ -100,13 +114,18 @@ class BaseRouter:
         request: Type[BaseRequest],
         response: Type[BaseResponse],
         handler: Callable,
+        auth_checkers: dict[str, Callable],
         **kwargs,
     ):
-        async def endpoint(request_data: request, starlette_request: StarletteRequest):
+        async def endpoint(
+            request_data: request,
+            starlette_request: StarletteRequest,
+        ):
             return await process_request(
                 request=request_data,
                 starlette_request=starlette_request,
                 func=handler,
+                auth_checkers=auth_checkers,
             )
 
         self.fastapi.post(path, response_model=response, **kwargs)(endpoint)

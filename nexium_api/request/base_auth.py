@@ -1,6 +1,8 @@
+from typing import Optional
+
+from pydantic import PrivateAttr
 from sqlmodel import SQLModel
 
 
-class BaseRequestAuth(SQLModel):
-    async def check(self):
-        pass
+class BaseAuth(SQLModel):
+    _checker: Optional[str] = PrivateAttr(default=None)

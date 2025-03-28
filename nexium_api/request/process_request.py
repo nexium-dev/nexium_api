@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from contextvars import ContextVar
 
 from fastapi.responses import ORJSONResponse
 from starlette.requests import Request as StarletteRequest
@@ -8,21 +9,30 @@ from nexium_api.response import Response, ResponseState, ResponseError
 from nexium_api.utils import get_ip, APIError
 
 
+ip: ContextVar[str] = ContextVar('ip')
+country: ContextVar[str] = ContextVar('country')
+city: ContextVar[str] = ContextVar('city')
+
+
 async def process_request(
     request: Request,
     starlette_request: StarletteRequest,
     func: Callable,
+    auth_checkers: dict[str, Callable],
 ) -> ORJSONResponse:
     try:
-        if hasattr(func, '__self__'):
-            cls = func.__self__.__class__
-            cls.starlette_request = starlette_request
+        # Localization
+        ip.set(await get_ip(starlette_request=starlette_request))
+        country.set('Arstotzka')
+        city.set('Altan')
 
-            cls.ip = await get_ip(starlette_request=starlette_request)
-            cls.country, cls.city = 'Arstotzka', 'Altan'
+        # Auth
+        # noinspection PyProtectedMember
+        auth_checker = auth_checkers.get(request.auth._checker, None)
+        if auth_checker:
+            await auth_checker(auth=request.auth)
 
-        await request.auth.check()
-
+        # Process
         data = await func(**request.data.model_dump())
         response = Response(data=data)
 

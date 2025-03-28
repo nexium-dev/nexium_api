@@ -1,7 +1,7 @@
 from typing import Type
 
 from .protocol import Protocol
-from nexium_api.request.base_auth import BaseRequestAuth
+from nexium_api.request.base_auth import BaseAuth
 from nexium_api.utils.api_error import APIError
 
 
@@ -9,7 +9,7 @@ class NexiumApiClient:
     def __init__(
         self,
         host: str,
-        auth: BaseRequestAuth = None,
+        auth: BaseAuth = None,
         protocol: Protocol = Protocol.HTTPS,
         errors: list[Type[APIError]] = None,
         errors_module = None,
