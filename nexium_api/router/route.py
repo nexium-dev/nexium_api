@@ -38,7 +38,7 @@ def route(
                 data: Optional[response_data]
 
             url = cls.prefix + path
-            json = Request(auth=auth, data=request_data(**kwargs)).model_dump()
+            json = Request(auth=cls.auth, data=request_data(**kwargs)).model_dump()
 
             async with ClientSession() as session:
                 async with session.post(url=url, json=json) as response:
