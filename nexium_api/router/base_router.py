@@ -1,6 +1,7 @@
 from typing import get_type_hints, Type, Callable
 
 from fastapi import APIRouter
+from pydantic import PydanticSchemaGenerationError
 from starlette.requests import Request as StarletteRequest
 
 from nexium_api.utils.base_facade_service import BaseFacadeService
@@ -82,9 +83,16 @@ class BaseRouter:
             path, type_, func_name, request_data, response_data, auth, kwargs = route.params
             auth_ = auth if auth else self.auth
 
-            class Request(BaseRequest):
-                auth: auth_
-                data: request_data
+            # FIXME
+            try:
+                class Request(BaseRequest):
+                    auth: auth_
+                    data: request_data
+            except PydanticSchemaGenerationError:
+                from typing import Any
+                class Request(BaseRequest):
+                    auth: Any
+                    data: request_data
 
             class Response(BaseResponse):
                 data: response_data

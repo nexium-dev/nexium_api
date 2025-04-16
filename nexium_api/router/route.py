@@ -3,6 +3,7 @@ from functools import wraps
 from typing import Type, Optional
 
 from aiohttp import ClientSession
+from pydantic import TypeAdapter
 
 from nexium_api.response.state import ResponseState
 from nexium_api.utils.api_error import APIError
@@ -38,7 +39,10 @@ def route(
                 data: Optional[response_data]
 
             url = cls.prefix + path
-            json = Request(auth=cls.auth, data=request_data(**kwargs)).model_dump()
+            json = TypeAdapter(Request).dump_python(
+                Request(auth=cls.auth, data=request_data(**kwargs)),
+                mode='json',
+            )
 
             async with ClientSession() as session:
                 async with session.post(url=url, json=json) as response:
@@ -50,7 +54,7 @@ def route(
                         if response.state == ResponseState.ERROR:
                             error_class = next((c for c in cls.errors if c.__name__ == response.error.class_name), None)
                             if not error_class:
-                                raise APIError()
+                                raise APIError(response.__str__())
                             raise error_class(message=response.error.message, **response.error.data)
 
                         if not response_field:
